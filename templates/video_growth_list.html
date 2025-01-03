@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Growth Rankings</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #ddd;
+        }
+        .title {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">Video Growth Rankings</div>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Title</th>
+                <th>View Count Increase</th>
+                <th>Like Count Increase</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for data in growth_data %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ data.video.title }}</td>
+                <td>{{ data.view_diff }}</td>
+                <td>{{ data.like_diff }}</td>
+                <td>
+                    <a href="https://www.youtube.com/watch?v={{ data.video.video_id }}" target="_blank">Watch</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5">No data available.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

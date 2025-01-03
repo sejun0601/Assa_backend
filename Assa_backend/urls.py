@@ -21,4 +21,5 @@ from django.contrib import admin
 urlpatterns = [
        path('admin/', admin.site.urls),
        path('api/v1/auth/', include('accounts.urls')),
+       path('api/v1/video/', include('shorts.urls')),
 ]

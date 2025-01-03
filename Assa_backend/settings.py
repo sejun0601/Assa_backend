@@ -43,8 +43,15 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'accounts'
+    'accounts',
+    'shorts',
+    'django_crontab'
 ]
+
+CRONJOBS = [
+    ('0 * * * *', 'shorts.management.commands.fetch_youtube_data', '>> ../logs/file.log 2>&1'),
+]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
