@@ -1,13 +1,29 @@
 import logging
-
+import math
+from datetime import datetime
 from django.core.management.base import BaseCommand
 from django.conf import settings
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-
+from django.utils.timezone import now
 from shorts.models import Video, VideoStatsHistory
 
 logger = logging.getLogger(__name__)
+
+def calculate_trend_score(view_diff, like_diff, age_in_hours, w_v=1.0, w_l=2.0):
+    """
+    트렌드 점수를 계산하는 함수
+    :param view_diff: 조회수 증가량
+    :param like_diff: 좋아요 증가량
+    :param age_in_hours: 영상이 게시된 후 경과 시간 (단위: 시간)
+    :param w_v: 조회수 가중치
+    :param w_l: 좋아요 가중치
+    :return: 트렌드 점수
+    """
+    if age_in_hours <= 0:
+        age_in_hours = 1  # 0으로 나누는 문제 방지
+
+    return (view_diff * w_v + like_diff * w_l) / math.sqrt(age_in_hours)
 
 class Command(BaseCommand):
     help = '유튜브 영상 정보를 주기적으로 수집하여 DB에 저장합니다.'
@@ -18,7 +34,7 @@ class Command(BaseCommand):
         2. 유튜브 API를 통해 각 영상의 통계 정보 조회
         3. 통계 정보를 업데이트하고 VideoStatsHistory에 기록
         4. 추가로 새로운 영상 50개를 불러와 저장
-        5. 증가율 계산 후 정렬
+        5. 증가율 계산 및 트렌드 점수 정렬 후 저장
         """
         # 이미 저장된 Video 리스트를 불러오기
         existing_videos = Video.objects.all()
@@ -73,22 +89,30 @@ class Command(BaseCommand):
             view_diff = new_view_count - old_view_count
             like_diff = new_like_count - old_like_count
 
-            updated_videos.append({
-                'video': video,
-                'view_diff': view_diff,
-                'like_diff': like_diff,
-            })
+            # 트렌드 점수 계산
+            age_in_hours = (now() - video.published_at).total_seconds() / 3600
+            trend_score = calculate_trend_score(view_diff, like_diff, age_in_hours)
 
             video.view_diff = view_diff
             video.like_diff = like_diff
+            video.trend_score = trend_score  # 모델에 trend_score 필드 추가 필요
             video.save()
+
+            updated_videos.append({
+                'video': video,
+                'trend_score': trend_score
+            })
 
         # 새로운 영상 50개 추가 (예: 특정 채널 ID를 기준으로 검색)
         try:
             search_response = youtube.search().list(
                 part="snippet",
                 maxResults=50,
-                order="date"
+                order="date",
+                regionCode="KR",
+                type="video",
+                videoDuration = "short",
+                relevanceLanguage = "ko"
             ).execute()
 
             for item in search_response.get('items', []):
@@ -120,6 +144,16 @@ class Command(BaseCommand):
                     stats = stats_response['items'][0]['statistics']
                     new_video.view_count = int(stats.get('viewCount', 0))
                     new_video.like_count = int(stats.get('likeCount', 0))
+
+                    # 트렌드 점수 계산
+                    published_at = new_video.published_at
+                    if isinstance(published_at, str):
+                        published_at = datetime.fromisoformat(published_at.replace('Z', '+00:00'))
+
+                    age_in_hours = (now() - published_at).total_seconds() / 3600
+                    trend_score = calculate_trend_score(new_video.view_count, new_video.like_count, age_in_hours)
+
+                    new_video.trend_score = trend_score
                     new_video.save()
 
                     # 이력 테이블에 초기 값 저장
@@ -135,17 +169,12 @@ class Command(BaseCommand):
         except HttpError as e:
             logger.error(f"유튜브 API 검색 호출 에러: {e}")
 
-        # 증가율(증가량) 정렬 - 예: 조회수 증가량 기준 내림차순
-        sorted_by_view = sorted(updated_videos, key=lambda x: x['view_diff'], reverse=True)
-        sorted_by_like = sorted(updated_videos, key=lambda x: x['like_diff'], reverse=True)
+        # 트렌드 점수 기준으로 정렬
+        sorted_by_trend = sorted(updated_videos, key=lambda x: x['trend_score'], reverse=True)
 
         # 예시: 로그로 확인
-        logger.info("조회수 증가량 순 정렬 (내림차순):")
-        for idx, info in enumerate(sorted_by_view, start=1):
-            logger.info(f"{idx}. {info['video'].title} / view_diff={info['view_diff']}")
+        logger.info("트렌드 점수 순 정렬 (내림차순):")
+        for idx, info in enumerate(sorted_by_trend, start=1):
+            logger.info(f"{idx}. {info['video'].title} / trend_score={info['trend_score']}")
 
-        logger.info("좋아요 증가량 순 정렬 (내림차순):")
-        for idx, info in enumerate(sorted_by_like, start=1):
-            logger.info(f"{idx}. {info['video'].title} / like_diff={info['like_diff']}")
-
-        self.stdout.write(self.style.SUCCESS('유튜브 데이터 수집 및 정렬 작업을 완료했습니다.'))
+        self.stdout.write(self.style.SUCCESS('유튜브 데이터 수집, 트렌드 점수 계산 및 정렬 작업을 완료했습니다.'))

@@ -15,6 +15,7 @@ class Video(models.Model):
     like_count = models.BigIntegerField(default=0)
     view_diff = models.BigIntegerField(default=0)  # 조회수 증가량
     like_diff = models.BigIntegerField(default=0)  # 좋아요 증가량
+    trend_score = models.BigIntegerField(default=0)
 
     def __str__(self):
         return self.title
@@ -29,6 +30,7 @@ class VideoStatsHistory(models.Model):
     collected_at = models.DateTimeField(auto_now_add=True)  # 통계를 수집한 시각
     view_count = models.BigIntegerField(default=0)
     like_count = models.BigIntegerField(default=0)
+    trend_score = models.BigIntegerField(default=0)
 
     def __str__(self):
         return f"{self.video.title} / {self.collected_at}"

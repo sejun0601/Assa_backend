@@ -1,41 +1,28 @@
-# app_name/views.py
-from django.shortcuts import render
-from django.utils import timezone
-from datetime import timedelta
+from django.http import JsonResponse
+from shorts.models import Video
 
-from shorts.models import Video, VideoStatsHistory
-
-def video_growth_view(request):
+def trending_videos(request):
     """
-    어제 대비 오늘 증가율이 큰 순서로 비디오 리스트를 보여주는 예시
+    트렌드 점수 기준으로 정렬된 영상 목록을 반환
     """
-    now = timezone.now()
-    yesterday = now - timedelta(days=1)
+    limit = request.GET.get('limit', 10)  # 쿼리 매개변수에서 'limit' 값을 가져옴 (기본값: 10)
+    try:
+        limit = int(limit)  # limit 값을 정수로 변환
+    except ValueError:
+        return JsonResponse({'error': 'Invalid limit value'}, status=400)
 
-    # 어제와 오늘 사이에 수집된 이력
-    # (실제 운영 시에는 정확히 '어제'에 수집된 자료를 가져오는 방식으로 수정 필요)
-    today_stats = VideoStatsHistory.objects.filter(collected_at__date=now.date())
-    yesterday_stats = VideoStatsHistory.objects.filter(collected_at__date=yesterday.date())
-
-    # 각 비디오별로 어제, 오늘 데이터 매핑
-    growth_data = []
-    for video in Video.objects.all():
-        today_stat = today_stats.filter(video=video).order_by('-collected_at').first()
-        yesterday_stat = yesterday_stats.filter(video=video).order_by('-collected_at').first()
-
-        if today_stat and yesterday_stat:
-            view_diff = today_stat.view_count - yesterday_stat.view_count
-            like_diff = today_stat.like_count - yesterday_stat.like_count
-            growth_data.append({
-                'video': video,
-                'view_diff': view_diff,
-                'like_diff': like_diff,
-            })
-
-    # 조회수 증가량 기준으로 내림차순 정렬
-    growth_data.sort(key=lambda x: x['view_diff'], reverse=True)
-
-    context = {
-        'growth_data': growth_data,
-    }
-    return render(request, '../templates/video_growth_list.html', context)
+    # 트렌드 점수 기준 정렬 및 limit에 따른 제한
+    videos = Video.objects.order_by('-trend_score')[:limit]
+    data = [
+        {
+            'video_id': video.video_id,
+            'title': video.title,
+            'description': video.description,
+            'trend_score': video.trend_score,
+            'view_count': video.view_count,
+            'like_count': video.like_count,
+            'published_at': video.published_at,
+        }
+        for video in videos
+    ]
+    return JsonResponse(data, safe=False)
