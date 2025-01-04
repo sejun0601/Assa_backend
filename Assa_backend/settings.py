@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+LOG_PATH = os.path.join(BASE_DIR, 'logs', 'file.log')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -28,7 +28,6 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
-    '192.168.64.26'  # 요청 URL의 IP 주소 추가
 ]
 
 
@@ -49,7 +48,7 @@ INSTALLED_APPS = [
 ]
 
 CRONJOBS = [
-    ('0 * * * *', 'shorts.management.commands.fetch_youtube_data', '>> ../logs/file.log 2>&1'),
+    ('0 * * * *', 'shorts.management.commands.fetch_youtube_data', f'>> {LOG_PATH} 2>&1'),
 ]
 
 
