@@ -1,12 +1,16 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from .models import Profile
 
 from django.contrib.auth import get_user_model, logout, authenticate , login
-from .serializers import RegisterSerializer
+from .serializers import RegisterSerializer, ProfileSerializer
+from django.middleware.csrf import get_token
+
 
 User = get_user_model()
 
@@ -68,8 +72,30 @@ class LoginStatusView(APIView):
         if request.user.is_authenticated:
             return Response({
                 "logged_in": True,
-                "username": request.user.username
+                "username": request.user.username,
+                "email":request.user.email
             }, status=200)
         return Response({
             "logged_in": False
         }, status=200)
+        
+class CSRFTokenView(APIView):
+    """
+    CSRF 토큰을 반환하는 View
+    """
+    def get(self, request, *args, **kwargs):
+        csrf_token = get_token(request)
+        return Response({"csrfToken": csrf_token}, status=status.HTTP_200_OK)
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        # 현재 로그인된 사용자와 연결된 프로필 가져오기
+        try:
+            profile = Profile.objects.get(user=request.user)
+        except Profile.DoesNotExist:
+            return Response({"detail": "Profile not found."}, status=404)
+
+        serializer = ProfileSerializer(profile)
+        return Response(serializer.data, status=200)

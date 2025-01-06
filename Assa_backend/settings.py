@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -28,6 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     '127.0.0.1',
     'localhost',
+    '172.10.7.19'
 ]
 
 
@@ -42,14 +44,19 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'accounts',
     'shorts',
-    'django_crontab'
+    'django_crontab',
+    'accounts.apps.AccountsConfig',
+    'django_celery_beat',
+    'game'
 ]
 
 CRONJOBS = [
-    ('0 * * * *', 'shorts.management.commands.fetch_youtube_data', f'>> {LOG_PATH} 2>&1'),
+    ('*/1 * * * *', 'source /root/Assa_backend/.env && DJANGO_SETTINGS_MODULE=Assa_backend.settings /root/venv/bin/python /root/Assa_backend/manage.py fetch_youtube_data >> /root/Assa_backend/logs/file2.log 2>&1'),
 ]
+
+
+
 
 
 MIDDLEWARE = [
@@ -131,9 +138,24 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-YOUTUBE_DATA_API_KEY = os.environ.get("YOUTUBE_DATA_API_KEY", "AIzaSyDMQC6KFhHiOeQaABNUrWfux_7ymB73Ak0")
+load_dotenv()
+
+YOUTUBE_DATA_API_KEY = os.getenv("YOUTUBE_DATA_API_KEY", "default-fallback-key")
+
+# Redis를 브로커로 설정
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+
+# 작업 결과 저장소 설정 (필요에 따라 활성화)
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# 직렬화 포맷
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'

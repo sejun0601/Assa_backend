@@ -1,6 +1,7 @@
 # accounts/serializers.py
 from rest_framework import serializers
 from django.contrib.auth.models import User
+from .models import Profile
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -16,3 +17,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             email=validated_data.get('email', '')
         )
         return user
+        
+class ProfileSerializer(serializers.ModelSerializer):
+    user = serializers.CharField(source='user.username', read_only=True)  # 사용자 이름 포함
+
+    class Meta:
+        model = Profile
+        fields = ['user', 'rank_score', 'win_count', 'lose_count']
