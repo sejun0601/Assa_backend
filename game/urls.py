@@ -4,7 +4,8 @@ from .views import (
     MatchQueueView,
     MatchDetailView,
     MatchAnswerView,
-    MatchForfeitView
+    MatchForfeitView,
+    MyMatchesView
 )
 
 urlpatterns = [
@@ -19,4 +20,7 @@ urlpatterns = [
 
     # 새로 만든 강제 종료/포기 엔드포인트
     path('matches/<int:match_id>/forfeit/', MatchForfeitView.as_view(), name='match_forfeit'),
+    
+    path('my-matches/', MyMatchesView.as_view(), name='my-matches')
+    
 ]

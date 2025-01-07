@@ -20,7 +20,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         
 class ProfileSerializer(serializers.ModelSerializer):
     user = serializers.CharField(source='user.username', read_only=True)  # 사용자 이름 포함
+    email = serializers.EmailField(source='user.email', read_only=True)
 
     class Meta:
         model = Profile
-        fields = ['user', 'rank_score', 'win_count', 'lose_count']
+        fields = ['user','email', 'rank_score', 'win_count', 'lose_count']

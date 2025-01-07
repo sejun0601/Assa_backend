@@ -40,6 +40,7 @@ class MatchQueue(models.Model):
     """
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
+    match = models.OneToOneField('Match', null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return f"{self.user.username} in queue"
